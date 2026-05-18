@@ -1,0 +1,9 @@
+=========================================
+MLOps K8s Deployment Project
+=========================================
+Name: Awemer Shafiq
+SAP ID: 70149020
+Section: A
+Semester: 6th Semester
+Project Due Date: 20-05-2026
+=========================================
