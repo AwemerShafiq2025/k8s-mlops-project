@@ -1,0 +1,8 @@
+jenkins.war
+jenkins/
+mlartifacts/
+mlflow.db
+local_outputs/
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup

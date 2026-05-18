@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iris-model-serving
+  namespace: mlops-k8s-deployment-dev
+  labels:
+    app: iris-serving
+spec:
+  replicas: 3 # Phase 7 ki requirement (Minimum 3-5 replicas) pehle se inject kar rahe hain
+  selector:
+    matchLabels:
+      app: iris-serving
+  template:
+    metadata:
+      labels:
+        app: iris-serving
+    spec:
+      containers:
+      - name: model-container
+        image: python:3.9-slim
+        command: ["python3", "-m", "http.server", "8000"] # Mock container for model serving endpoint
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"

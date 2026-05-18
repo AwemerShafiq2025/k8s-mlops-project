@@ -1,0 +1,188 @@
+# PIPELINE DEFINITION
+# Name: iris-mlops-pipeline
+# Description: A clean pipeline to load, train and evaluate Iris model for university submission.
+components:
+  comp-evaluate-model:
+    executorLabel: exec-evaluate-model
+    inputDefinitions:
+      parameters:
+        data_json:
+          parameterType: STRING
+        model_str:
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        Output:
+          parameterType: NUMBER_DOUBLE
+  comp-prepare-data:
+    executorLabel: exec-prepare-data
+    outputDefinitions:
+      parameters:
+        Output:
+          parameterType: STRING
+  comp-train-model:
+    executorLabel: exec-train-model
+    inputDefinitions:
+      parameters:
+        data_json:
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        Output:
+          parameterType: STRING
+deploymentSpec:
+  executors:
+    exec-evaluate-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - evaluate_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn'\
+          \  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.1'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef evaluate_model(data_json: str, model_str: str) -> float:\n  \
+          \  import json\n    import pandas as pd\n    import pickle\n    import codecs\n\
+          \n    data = json.loads(data_json)\n    df = pd.DataFrame(data)\n\n    X\
+          \ = df.drop(columns=['target'])\n    y = df['target']\n\n    model = pickle.loads(codecs.decode(model_str.encode(\"\
+          utf-8\"), \"base64\"))\n    accuracy = float(model.score(X, y))\n    print(f\"\
+          \\n=====================================\")\n    print(f\"  SUCCESS: Model\
+          \ Accuracy: {accuracy * 100}%\")\n    print(f\"=====================================\\\
+          n\")\n    return accuracy\n\n"
+        image: python:3.9-slim
+    exec-prepare-data:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - prepare_data
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn'\
+          \  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.1'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef prepare_data() -> str:\n    from sklearn.datasets import load_iris\n\
+          \    import pandas as pd\n    import json\n\n    iris = load_iris()\n  \
+          \  df = pd.DataFrame(data=iris.data, columns=iris.feature_names)\n    df['target']\
+          \ = iris.target\n\n    return json.dumps(df.to_dict(orient='list'))\n\n"
+        image: python:3.9-slim
+    exec-train-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - train_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn'\
+          \  &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.1'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef train_model(data_json: str) -> str:\n    import json\n    import\
+          \ pandas as pd\n    from sklearn.linear_model import LogisticRegression\n\
+          \    import pickle\n    import codecs\n\n    data = json.loads(data_json)\n\
+          \    df = pd.DataFrame(data)\n\n    X = df.drop(columns=['target'])\n  \
+          \  y = df['target']\n\n    model = LogisticRegression(max_iter=200)\n  \
+          \  model.fit(X, y)\n\n    model_serialized = codecs.encode(pickle.dumps(model),\
+          \ \"base64\").decode(\"utf-8\")\n    return model_serialized\n\n"
+        image: python:3.9-slim
+pipelineInfo:
+  description: A clean pipeline to load, train and evaluate Iris model for university
+    submission.
+  name: iris-mlops-pipeline
+root:
+  dag:
+    tasks:
+      evaluate-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-evaluate-model
+        dependentTasks:
+        - prepare-data
+        - train-model
+        inputs:
+          parameters:
+            data_json:
+              taskOutputParameter:
+                outputParameterKey: Output
+                producerTask: prepare-data
+            model_str:
+              taskOutputParameter:
+                outputParameterKey: Output
+                producerTask: train-model
+        taskInfo:
+          name: evaluate-model
+      prepare-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-prepare-data
+        taskInfo:
+          name: prepare-data
+      train-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train-model
+        dependentTasks:
+        - prepare-data
+        inputs:
+          parameters:
+            data_json:
+              taskOutputParameter:
+                outputParameterKey: Output
+                producerTask: prepare-data
+        taskInfo:
+          name: train-model
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.16.1
